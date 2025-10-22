@@ -22,7 +22,7 @@ Para cada jogo, busca informações detalhadas
 # 4. Enriquecimento de Dados (2 etapas)
 Primeira busca (preço BR):
 
-Consulta API Steam para pegar preço em Reais (em Reais, nao poderia ser pego diretamente da API do CheapShark, por que os valores sao retornados em dolar, e o valor convertido nao bate com o preço real)
+Consulta API Steam para pegar preço em Reais (nao poderia ser pego diretamente da API do CheapShark, por que os valores sao retornados em dolar, e o valor convertido nao bate com o preço real)
 Pega porcentagem de desconto oficial da Steam
 
 Segunda busca (detalhes completos):
