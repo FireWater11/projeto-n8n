@@ -1,0 +1,421 @@
+{
+  "name": "Projeto Promos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -112,
+        1456
+      ],
+      "id": "7593d420-54d3-4bed-bd49-c6772161b3aa",
+      "name": "Schedule Trigger2"
+    },
+    {
+      "parameters": {
+        "url": "https://www.cheapshark.com/api/1.0/deals?storeID=1&pageSize=60\n",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        48,
+        1456
+      ],
+      "id": "7505c079-cac0-4de1-bb90-1bccf4fd5477",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "batchSize": 2,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        224,
+        1456
+      ],
+      "id": "494d2986-2752-4bd7-be18-812672c695a3",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "url": "=https://store.steampowered.com/api/appdetails?appids={{ $json.steamAppID }}&cc=br&l=portuguese&filters=price_overview",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        432,
+        1472
+      ],
+      "id": "9f415e93-f8e7-43ec-83d9-b1b24b7db889",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst appids = Object.keys(item);\nconst appid = appids[0];\nconst steamData = item[appid];\n\nlet priceBRL = null;\nlet discountSteam = null;\n\nif (steamData && steamData.success && steamData.data && steamData.data.price_overview) {\n  const pov = steamData.data.price_overview;\n  priceBRL = pov.final / 100;\n  discountSteam = pov.discount_percent;\n}\n\nreturn [{\n  json: {\n    steamAppID: appid,\n    priceBRL: priceBRL,\n    discountSteam: discountSteam\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        1472
+      ],
+      "id": "03f9e4c1-5362-4e9b-94b6-746d74ccf637",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst results = [];\n\nfor (const item of allItems) {\n  const game = item.json;\n  \n  if (!game.steamAppID || game.steamAppID === null || game.steamAppID === \"\") {\n    continue;\n  }\n  \n  results.push({\n    json: {\n      steamAppID: game.steamAppID,\n      title: game.title,\n      thumb: game.thumb,\n      salePrice: game.salePrice,\n      normalPrice: game.normalPrice,\n      savings: game.savings,\n      dealRating: game.dealRating,\n      steamRating: game.steamRatingText,\n      metacriticScore: game.metacriticScore,\n      storeID: game.storeID,\n      gameID: game.gameID,\n      priceBRL: game.priceBRL || null,\n      discountSteam: game.discountSteam || null\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        1312
+      ],
+      "id": "7ce19d61-c23a-442f-8f2e-03a43795acdf",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: item.json.data[0]\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        1296
+      ],
+      "id": "cbd7892c-7750-4d47-a533-020fdf70ff85",
+      "name": "Code in JavaScript10"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1232,
+        1312
+      ],
+      "id": "b4a750f3-c39d-47d0-aaa8-3614fd49e677",
+      "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "url": "=https://store.steampowered.com/api/appdetails?appids={{$json[\"steamAppID\"]}}&cc=br&l=portuguese",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1408,
+        1328
+      ],
+      "id": "ec22617b-8208-4dd5-a53c-af3c51616719",
+      "name": "HTTP Request8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawResponse = $input.first().json;\nconst steamResponse = Array.isArray(rawResponse) ? rawResponse[0] : rawResponse;\n\nlet name = 'Nome não encontrado';\nlet steamAppID = 'ID não encontrado';\nlet priceBRL = 0;\nlet precoOriginal = 0;\nlet discountSteam = 0;\nlet recomendacao = '';\nlet economia = 0;\nlet avaliacoes = '';\nlet totalAvaliacoes = 0;\nlet metacriticScore = null;\n\nconst appIDs = Object.keys(steamResponse);\n\nif (appIDs.length > 0) {\n  steamAppID = appIDs[0];\n  const gameData = steamResponse[steamAppID];\n  \n  if (gameData.success && gameData.data) {\n    const data = gameData.data;\n    name = data.name || 'Nome não encontrado';\n    \n    if (data.price_overview) {\n      precoOriginal = data.price_overview.initial / 100;\n      priceBRL = data.price_overview.final / 100;\n      discountSteam = data.price_overview.discount_percent;\n      economia = precoOriginal - priceBRL;\n    }\n    \n    if (data.recommendations && data.recommendations.total) {\n      totalAvaliacoes = data.recommendations.total;\n      \n      if (totalAvaliacoes >= 100000) {\n        avaliacoes = `Extremamente Popular (${(totalAvaliacoes/1000).toFixed(0)}k+ avaliações positivas)`;\n      } else if (totalAvaliacoes >= 50000) {\n        avaliacoes = `Muito Popular (${(totalAvaliacoes/1000).toFixed(0)}k avaliações positivas)`;\n      } else if (totalAvaliacoes >= 10000) {\n        avaliacoes = `Popular (${(totalAvaliacoes/1000).toFixed(1)}k avaliações positivas)`;\n      } else if (totalAvaliacoes >= 5000) {\n        avaliacoes = `Bem Avaliado (${(totalAvaliacoes/1000).toFixed(1)}k avaliações positivas)`;\n      } else if (totalAvaliacoes >= 1000) {\n        avaliacoes = `Avaliações Positivas (${totalAvaliacoes} recomendações)`;\n      } else if (totalAvaliacoes >= 500) {\n        avaliacoes = `Avaliações Mistas (${totalAvaliacoes} recomendações)`;\n      } else if (totalAvaliacoes >= 100) {\n        avaliacoes = `Poucas Avaliações (${totalAvaliacoes} recomendações)`;\n      } else {\n        avaliacoes = `Muito Poucas Avaliações (${totalAvaliacoes} recomendações)`;\n      }\n    } else {\n      avaliacoes = 'Sem avaliações disponíveis';\n    }\n    \n    if (data.metacritic) {\n      metacriticScore = data.metacritic.score;\n      \n      if (metacriticScore >= 90) {\n        avaliacoes = `Obra-Prima (Metacritic ${metacriticScore}/100) - ${avaliacoes}`;\n      } else if (metacriticScore >= 80) {\n        avaliacoes = `Excelente (Metacritic ${metacriticScore}/100) - ${avaliacoes}`;\n      } else if (metacriticScore >= 70) {\n        avaliacoes = `Bom Jogo (Metacritic ${metacriticScore}/100) - ${avaliacoes}`;\n      } else if (metacriticScore >= 60) {\n        avaliacoes = `Mediano (Metacritic ${metacriticScore}/100) - ${avaliacoes}`;\n      } else {\n        avaliacoes = `Fraco (Metacritic ${metacriticScore}/100) - ${avaliacoes}`;\n      }\n    }\n    \n    let status = '';\n    \n    if (discountSteam >= 90 || priceBRL <= 3) {\n      status = 'COMPRE AGORA';\n    } else if (discountSteam >= 75 && priceBRL <= 10) {\n      status = 'COMPRE AGORA';\n    } else if (discountSteam >= 75) {\n      status = 'VALE MUITO A PENA';\n    } else if (discountSteam >= 60) {\n      status = 'VALE A PENA';\n    } else if (discountSteam >= 50) {\n      status = 'BOM NEGÓCIO';\n    } else if (discountSteam >= 40) {\n      status = 'VALE SE VOCÊ QUISER';\n    } else if (discountSteam >= 25) {\n      status = 'SÓ SE ESTIVER NA WISHLIST';\n    } else if (discountSteam >= 10) {\n      status = 'NÃO VALE A PENA';\n    } else {\n      status = 'ESPERE PROMOÇÃO MELHOR';\n    }\n    \n    if (metacriticScore && metacriticScore < 60 && discountSteam < 75) {\n      status = 'NÃO RECOMENDADO';\n    }\n    \n    if (totalAvaliacoes < 100 && discountSteam < 50) {\n      status = 'PESQUISE ANTES';\n    }\n    \n    recomendacao = `${status} | Economia de R$ ${economia.toFixed(2)} (${discountSteam}% OFF) | ${avaliacoes}`;\n  }\n}\n\nreturn {\n  steamAppID,\n  name,\n  precoOriginal: `R$ ${precoOriginal.toFixed(2)}`,\n  precoFinal: `R$ ${priceBRL.toFixed(2)}`,\n  recomendacao\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        1328
+      ],
+      "id": "aa9da76c-1e9b-485a-a4ee-fb0df0314727",
+      "name": "Code in JavaScript11"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        768,
+        1472
+      ],
+      "id": "420bedcc-9b51-475b-b7be-a647584f6dc8",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nlet jogos = [];\n\nif (items.length === 1 && Array.isArray(items[0].json)) {\n  jogos = items[0].json;\n} else {\n  jogos = items.map(i => i.json);\n}\n\nconst mensagens = [];\nconst tamanhoDoLote = 5;\n\nfor (let i = 0; i < jogos.length; i += tamanhoDoLote) {\n  const lote = jogos.slice(i, i + tamanhoDoLote);\n\n// nao enviar jogos com informacoes undefined ou null\n  const jogosValidos = lote.filter(jogo =>\n    jogo.steamAppID &&\n    jogo.name &&\n    jogo.precoOriginal &&\n    jogo.precoFinal &&\n    jogo.recomendacao &&\n    jogo.name.trim() !== \"\" &&\n    jogo.precoOriginal.trim() !== \"\" &&\n    jogo.precoFinal.trim() !== \"\" &&\n    jogo.recomendacao.trim() !== \"\"\n  );\n\n  if (jogosValidos.length === 0) \n    continue;\n\n  let mensagem = jogosValidos.map(jogo => {\n    return [\n      `**ID:** ${jogo.steamAppID}`,\n      `**Nome:** ${jogo.name}`,\n      `**Preço Original:** ${jogo.precoOriginal}`,\n      `**Preço Final:** ${jogo.precoFinal}`,\n      `**Recomendação:** ${jogo.recomendacao}`,\n      ``\n    ].join('\\n\\n');\n  }).join('\\n\\n');\n\n// devemos limitar devido a capacidade de envio da propria API do DC\n  if (mensagem.length > 1900) {\n    mensagem = mensagem.slice(0, 1900) + '\\n... (truncado)';\n  }\n\n  mensagens.push({\n    json: {\n      content: mensagem.trim() || \"Nenhum jogo válido neste lote.\"\n    }\n  });\n}\n\nreturn mensagens;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        1168
+      ],
+      "id": "0bd64cf0-c8b2-4e0a-8c6b-5a56a7f3c98d",
+      "name": "Code in JavaScript12"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1428915873938407555/-TonNUpG6eS7HUEAh1qzYPCApZGDsNrwxQ1nFBFfjb8pihGYjAamEo3u--SSeT-wx9sb",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        1168
+      ],
+      "id": "5170f142-8a88-4302-9093-908987ee46f1",
+      "name": "HTTP Request9"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "steamAppID",
+              "field2": "steamAppID"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        1312
+      ],
+      "id": "b2043c01-0d26-4ae3-8eb6-32d28431e469",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "content": "Por algum motivo, sem esse \"Merge2\", ele envia 2 games a menos."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        880,
+        1104
+      ],
+      "id": "7a4d0a72-0471-4de2-bd00-d702e1289ef8",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript10": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request8": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript11": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e43d7aef-98cf-4f73-afe3-8b8c84bd39f8",
+  "meta": {
+    "instanceId": "91c386b39ea5f23dad7fd088ddd03c565e9ecf3dea63fa911bce2503ad0e5cfe"
+  },
+  "id": "TY65fLPjMEDMBTqD",
+  "tags": []
+}
